@@ -25,6 +25,7 @@ from translation import translate_to_portuguese
 from utils import get_file_extension, display_rating_stars
 from database import DB
 from google_auth import get_auth_url, exchange_code_for_token, get_user_info, validate_state, GoogleAuthError
+from photography_tips import get_tip_of_the_day, get_tip_by_topic
 
 # Helper functions for authentication
 def hash_password(password):
@@ -357,6 +358,9 @@ if 'image_id' not in st.session_state:
 
 if 'user_gallery' not in st.session_state:
     st.session_state.user_gallery = []
+    
+if 'photo_tip' not in st.session_state:
+    st.session_state.photo_tip = None
 
 # Check if user is logged in
 if not st.session_state.logged_in:
@@ -531,7 +535,7 @@ with st.sidebar:
         st.info("Nenhum documento de referência foi carregado ainda.")
 
 # Main content area with tabs
-tab1, tab2 = st.tabs(["Análise de Fotografia", "Melhorias Sugeridas"])
+tab1, tab2, tab3 = st.tabs(["Análise de Fotografia", "Melhorias Sugeridas", "Dica do Dia"])
 
 with tab1:
     st.header("Upload e Análise de Fotografia")
@@ -676,11 +680,48 @@ with tab2:
     else:
         st.info("Por favor, primeiro faça upload e analise uma fotografia na aba 'Análise de Fotografia'.")
 
+# Tip of the Day tab
+with tab3:
+    st.header("Dica de Fotografia do Dia")
+    
+    # Initialize tip in session state if not already there
+    if 'photo_tip' not in st.session_state:
+        with st.spinner('Gerando dica de fotografia...'):
+            st.session_state.photo_tip = get_tip_of_the_day(st.session_state.model)
+    
+    # Display the tip
+    if st.session_state.photo_tip:
+        st.subheader(st.session_state.photo_tip["title"])
+        st.write(st.session_state.photo_tip["content"])
+        st.caption(f"Tópico: {st.session_state.photo_tip['topic']}")
+        st.caption(f"Data: {st.session_state.photo_tip['date']}")
+    
+    # Get a different tip
+    if st.button("Nova Dica"):
+        with st.spinner('Gerando nova dica de fotografia...'):
+            st.session_state.photo_tip = get_tip_of_the_day(st.session_state.model, force_refresh=True)
+            st.rerun()
+    
+    # Get a tip on a specific topic
+    st.subheader("Buscar Dica por Tópico")
+    from photography_tips import PHOTOGRAPHY_TIP_TOPICS
+    
+    topic = st.selectbox("Selecione um tópico de fotografia:", PHOTOGRAPHY_TIP_TOPICS)
+    
+    if st.button("Buscar Dica por Tópico"):
+        with st.spinner(f'Gerando dica sobre {topic}...'):
+            topic_tip = get_tip_by_topic(st.session_state.model, topic)
+            st.subheader(topic_tip["title"])
+            st.write(topic_tip["content"])
+            st.caption(f"Tópico: {topic_tip['topic']}")
+
 # Footer
 st.markdown("---")
 st.markdown("### Sobre este Sistema")
 st.markdown("""
 Este sistema utiliza o modelo Llama para análise de imagens e recuperação aumentada por geração (RAG) 
-para fornecer feedback sobre fotografias com base em documentos de referência. Todos os resultados e sugestões 
-são apresentados em Português Brasileiro.
+para fornecer feedback sobre fotografias com base em documentos de referência. 
+
+Também fornece dicas diárias de fotografia e sugestões específicas para diferentes áreas da fotografia.
+Todos os resultados, dicas e sugestões são apresentados em Português Brasileiro.
 """)
