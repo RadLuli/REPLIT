@@ -1,6 +1,9 @@
 import streamlit as st
 import os
 import tempfile
+import base64
+import uuid
+from datetime import datetime
 from PIL import Image
 import io
 
@@ -16,6 +19,124 @@ from rag_system import generate_rag_response
 from llm_integration import load_llama_model
 from translation import translate_to_portuguese
 from utils import get_file_extension, display_rating_stars
+from database import DB
+
+# Helper functions for authentication
+def hash_password(password):
+    """Simple password hashing"""
+    import hashlib
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def login():
+    """Handle user login"""
+    st.header("Login")
+    
+    username = st.text_input("Nome de Usuário")
+    password = st.text_input("Senha", type="password")
+    
+    if st.button("Entrar"):
+        if not username or not password:
+            st.error("Por favor, preencha todos os campos")
+            return False
+        
+        # Hash the password
+        hashed_password = hash_password(password)
+        
+        # Authenticate user
+        if DB.authenticate_user(username, hashed_password):
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.rerun()
+            return True
+        else:
+            st.error("Nome de usuário ou senha incorretos")
+            return False
+    
+    return False
+
+def register():
+    """Handle user registration"""
+    st.header("Registrar")
+    
+    username = st.text_input("Nome de Usuário", key="reg_username")
+    password = st.text_input("Senha", type="password", key="reg_password")
+    confirm_password = st.text_input("Confirmar Senha", type="password")
+    email = st.text_input("Email (opcional)")
+    name = st.text_input("Nome Completo (opcional)")
+    
+    if st.button("Registrar"):
+        if not username or not password:
+            st.error("Nome de usuário e senha são obrigatórios")
+            return False
+        
+        if password != confirm_password:
+            st.error("As senhas não coincidem")
+            return False
+        
+        # Check if user already exists
+        existing_user = DB.get_user(username)
+        if existing_user:
+            st.error("Nome de usuário já existe, escolha outro")
+            return False
+        
+        # Hash the password
+        hashed_password = hash_password(password)
+        
+        # Save user
+        DB.save_user(username, hashed_password, email, name)
+        st.success("Registro bem-sucedido! Faça login para continuar.")
+        return True
+    
+    return False
+
+def logout():
+    """Handle user logout"""
+    if st.sidebar.button("Sair"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
+
+def save_analysis_to_db():
+    """Save current analysis to database"""
+    if 'processed_image' in st.session_state and st.session_state.processed_image:
+        if 'image_id' not in st.session_state:
+            # Generate a unique ID for the image
+            st.session_state.image_id = str(uuid.uuid4())
+        
+        # Convert image to base64
+        buffer = BytesIO()
+        st.session_state.processed_image.save(buffer, format="PNG")
+        image_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        
+        # Get analysis results
+        analysis_results = {
+            'rating': st.session_state.rating if 'rating' in st.session_state else None,
+            'analysis': st.session_state.rag_response if 'rag_response' in st.session_state else None,
+            'technical_data': st.session_state.image_analysis if 'image_analysis' in st.session_state else None,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        # Get enhancement data if available
+        enhancement_type = st.session_state.enhancement_type if 'enhancement_type' in st.session_state else None
+        enhanced_image_data = None
+        
+        if 'enhanced_image' in st.session_state and st.session_state.enhanced_image:
+            buffer = BytesIO()
+            st.session_state.enhanced_image.save(buffer, format="PNG")
+            enhanced_image_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        
+        # Save to database
+        DB.save_image_analysis(
+            st.session_state.image_id,
+            st.session_state.username,
+            image_data,
+            analysis_results,
+            enhancement_type,
+            enhanced_image_data
+        )
+        return True
+    
+    return False
 
 # Set page configuration
 st.set_page_config(
@@ -88,24 +209,141 @@ if 'enhancement_type' not in st.session_state:
 if 'model_status' not in st.session_state:
     st.session_state.model_status = "normal"
 
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
 
-# Title and description
+if 'username' not in st.session_state:
+    st.session_state.username = None
+
+if 'image_id' not in st.session_state:
+    st.session_state.image_id = None
+
+if 'user_gallery' not in st.session_state:
+    st.session_state.user_gallery = []
+
+# Check if user is logged in
+if not st.session_state.logged_in:
+    # Title and description for login page
+    st.title("Avaliação Fotográfica com IA")
+    st.markdown("""
+    Este sistema utiliza Inteligência Artificial para analisar e avaliar fotografias, 
+    fornecendo feedback e sugestões de melhoria com base em materiais de referência.
+    
+    Por favor, faça login ou registre-se para continuar.
+    """)
+    
+    # Create tabs for login and register
+    login_tab, register_tab = st.tabs(["Login", "Registrar"])
+    
+    with login_tab:
+        login()
+    
+    with register_tab:
+        register()
+    
+    # Stop the app here if not logged in
+    st.stop()
+
+# Title and description for main app
 st.title("Avaliação Fotográfica com IA")
-st.markdown("""
+st.markdown(f"""
 Este sistema utiliza Inteligência Artificial para analisar e avaliar fotografias, 
 fornecendo feedback e sugestões de melhoria com base em materiais de referência.
+
+Usuário logado: **{st.session_state.username}**
 """)
 
-# Sidebar for document upload and management
+# Sidebar for user management, document upload, and image history
 with st.sidebar:
-    st.header("Materiais de Referência")
-    st.markdown("Faça upload dos materiais de referência para análise fotográfica (PDF, EPUB, MOBI, AZW)")
+    # User management section
+    st.subheader(f"Usuário: {st.session_state.username}")
+    if logout():
+        st.rerun()
     
-    uploaded_docs = st.file_uploader(
-        "Fazer upload de documentos", 
-        type=["pdf", "epub", "mobi", "azw"], 
-        accept_multiple_files=True
-    )
+    # Tab selection for sidebar
+    sidebar_tab1, sidebar_tab2 = st.tabs(["Materiais", "Histórico"])
+    
+    with sidebar_tab1:
+        st.header("Materiais de Referência")
+        st.markdown("Faça upload dos materiais de referência para análise fotográfica (PDF, EPUB, MOBI, AZW)")
+        
+        uploaded_docs = st.file_uploader(
+            "Fazer upload de documentos", 
+            type=["pdf", "epub", "mobi", "azw"], 
+            accept_multiple_files=True
+        )
+    
+    with sidebar_tab2:
+        st.header("Histórico de Análises")
+        
+        # Load user's image history
+        try:
+            user_images = DB.get_user_images(st.session_state.username)
+            st.session_state.user_gallery = user_images
+            
+            if user_images:
+                st.write(f"Você tem {len(user_images)} imagens analisadas")
+                
+                for i, img_data in enumerate(user_images):
+                    st.markdown(f"**{i+1}. Imagem analisada em {img_data['upload_date'][:10]}**")
+                    
+                    if img_data['thumbnail']:
+                        # Display a smaller thumbnail
+                        st.image(f"data:image/png;base64,{img_data['thumbnail']}", width=100)
+                    
+                    if img_data['latest_analysis'] and 'rating' in img_data['latest_analysis']:
+                        st.write(f"Classificação: {img_data['latest_analysis']['rating']}/5")
+                    
+                    # Button to load this image and its analysis
+                    if st.button(f"Carregar análise #{i+1}", key=f"load_img_{img_data['id']}"):
+                        # Get full image details
+                        image_details = DB.get_image_details(img_data['id'])
+                        
+                        if image_details and image_details['analysis_history']:
+                            # Get the first entry with image data
+                            first_entry = image_details['analysis_history'][0]
+                            if 'image_data' in first_entry:
+                                # Convert base64 back to image
+                                import base64
+                                from io import BytesIO
+                                img_bytes = base64.b64decode(first_entry['image_data'])
+                                img = Image.open(BytesIO(img_bytes))
+                                
+                                # Update session state
+                                st.session_state.processed_image = img
+                                st.session_state.image_id = img_data['id']
+                                
+                                # Get the most recent analysis
+                                latest_analysis = image_details['analysis_history'][-1]
+                                if 'analysis_results' in latest_analysis:
+                                    results = latest_analysis['analysis_results']
+                                    
+                                    if 'rating' in results:
+                                        st.session_state.rating = results['rating']
+                                    
+                                    if 'analysis' in results:
+                                        st.session_state.rag_response = results['analysis']
+                                    
+                                    if 'technical_data' in results:
+                                        st.session_state.image_analysis = results['technical_data']
+                                
+                                # Check if there's an enhancement
+                                if 'enhancement' in latest_analysis:
+                                    enhancement = latest_analysis['enhancement']
+                                    st.session_state.enhancement_type = enhancement['type']
+                                    
+                                    # Load enhanced image if available
+                                    if 'image_data' in enhancement:
+                                        enhanced_img_bytes = base64.b64decode(enhancement['image_data'])
+                                        enhanced_img = Image.open(BytesIO(enhanced_img_bytes))
+                                        st.session_state.enhanced_image = enhanced_img
+                                
+                                st.success("Análise carregada com sucesso!")
+                                st.rerun()
+            else:
+                st.info("Você ainda não tem análises salvas.")
+        except Exception as e:
+            st.error(f"Erro ao carregar histórico: {str(e)}")
     
     if uploaded_docs:
         for doc in uploaded_docs:
@@ -200,6 +438,13 @@ with tab1:
                         st.session_state.rating = 1
                 except:
                     st.session_state.rating = 3  # Default rating if extraction fails
+                
+                # Save analysis to database
+                try:
+                    if save_analysis_to_db():
+                        st.success("Análise salva no banco de dados!")
+                except Exception as e:
+                    st.warning(f"Não foi possível salvar a análise no banco de dados: {str(e)}")
             
             # Display the results
             st.subheader("Resultados da Análise")
@@ -263,6 +508,19 @@ with tab2:
                 st.session_state.enhanced_image.save(buf, format="PNG")
                 byte_im = buf.getvalue()
                 
+                # Save to database button
+                if st.button("Salvar no Sistema", key="save_enhanced"):
+                    try:
+                        # Update enhancement in session state
+                        st.session_state.enhancement_type = enhancement_type
+                        
+                        # Save to database
+                        if save_analysis_to_db():
+                            st.success("Imagem melhorada salva no banco de dados!")
+                    except Exception as e:
+                        st.warning(f"Não foi possível salvar a imagem melhorada: {str(e)}")
+                
+                # Download button
                 st.download_button(
                     label="Baixar Imagem Melhorada",
                     data=byte_im,
