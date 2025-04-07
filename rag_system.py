@@ -1,0 +1,175 @@
+import os
+import faiss
+import numpy as np
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.vectorstores import FAISS
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.docstore.document import Document
+from langchain.chains import RetrievalQA
+from langchain.prompts import PromptTemplate
+from langchain.schema.runnable import RunnablePassthrough, RunnableLambda
+
+def create_embeddings():
+    """Create embeddings model"""
+    # Using a lighter model for embeddings to conserve resources
+    return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
+def prepare_documents(documents):
+    """
+    Prepare documents for RAG by splitting and creating a vector store
+    
+    Args:
+        documents: List of document dictionaries with 'content' field
+    
+    Returns:
+        FAISS: Vector store with document chunks
+    """
+    # Create text splitter
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200,
+        length_function=len,
+    )
+    
+    # Process each document
+    all_splits = []
+    for doc in documents:
+        # Create Document objects with metadata
+        doc_content = doc['content']
+        doc_name = doc['name']
+        doc_type = doc['type']
+        
+        # Split text into chunks
+        splits = text_splitter.split_text(doc_content)
+        
+        # Create Document objects
+        for i, split in enumerate(splits):
+            doc_obj = Document(
+                page_content=split,
+                metadata={
+                    "source": doc_name,
+                    "type": doc_type,
+                    "chunk": i
+                }
+            )
+            all_splits.append(doc_obj)
+    
+    # Create embeddings
+    embeddings = create_embeddings()
+    
+    # Create vector store
+    vector_store = FAISS.from_documents(all_splits, embeddings)
+    
+    return vector_store
+
+def generate_prompt_from_image_analysis(image_analysis):
+    """
+    Generate a prompt for the LLM based on image analysis
+    
+    Args:
+        image_analysis: Dictionary with image analysis results
+    
+    Returns:
+        str: Prompt text
+    """
+    prompt = f"""
+    Analyze this photography based on the following technical details:
+    
+    - Dimensions: {image_analysis['dimensions']}
+    - Aspect Ratio: {image_analysis['aspect_ratio']}
+    - Brightness: {image_analysis['brightness']}
+    - Contrast: {image_analysis['contrast']}
+    - Sharpness: {image_analysis['sharpness']}
+    - Exposure: {image_analysis['exposure']}
+    - Color Balance: {image_analysis['color_balance']}
+    - Saturation: {image_analysis['saturation']}
+    - Composition: {image_analysis['composition']}
+    - Contains Faces: {'Yes' if image_analysis['has_faces'] else 'No'}
+    - Number of Faces: {image_analysis['number_of_faces']}
+    - Red Channel Average: {image_analysis['red_channel_avg']}
+    - Green Channel Average: {image_analysis['green_channel_avg']}
+    - Blue Channel Average: {image_analysis['blue_channel_avg']}
+    
+    As a photography expert, provide a comprehensive evaluation of this photograph, including:
+    1. Overall rating on a scale of 1-5 stars
+    2. Technical strengths and weaknesses
+    3. Artistic assessment
+    4. Specific improvement suggestions
+    5. Tips for post-processing
+    
+    Format your response with clear sections and be constructive in your feedback.
+    """
+    return prompt
+
+def format_docs(docs):
+    """Format retrieved documents into a single string"""
+    return "\n\n".join(doc.page_content for doc in docs)
+
+def generate_rag_response(image_analysis, documents, model):
+    """
+    Generate RAG response based on image analysis and documents
+    
+    Args:
+        image_analysis: Dictionary with image analysis results
+        documents: List of document dictionaries
+        model: LLM model
+    
+    Returns:
+        str: Generated response
+    """
+    # Prepare documents for RAG if we have documents
+    if documents:
+        vector_store = prepare_documents(documents)
+        retriever = vector_store.as_retriever(search_kwargs={"k": 3})
+    else:
+        # If no documents, we'll just use the LLM without retrieval
+        retriever = None
+    
+    # Generate question from image analysis
+    question = generate_prompt_from_image_analysis(image_analysis)
+    
+    # Create prompt template for the RAG chain
+    template = """
+    You are a photography expert and teacher. Use the following photography reference materials to help you
+    provide an in-depth analysis and feedback on a student's photograph.
+    
+    Reference materials:
+    {context}
+    
+    Photo analysis task:
+    {question}
+    
+    Provide your analysis in English, focusing on actionable feedback and specific improvements.
+    Be sure to include a clear rating out of 5 stars in your response.
+    """
+    
+    prompt = PromptTemplate.from_template(template)
+    
+    if retriever:
+        # Create RAG chain with retrieval
+        rag_chain = (
+            {"context": retriever | format_docs, "question": RunnablePassthrough()}
+            | prompt
+            | model
+        )
+        
+        # Run the chain
+        response = rag_chain.invoke(question)
+    else:
+        # If no documents, just use the LLM with a simplified prompt
+        simplified_prompt = """
+        You are a photography expert and teacher. Provide an in-depth analysis 
+        and feedback on a student's photograph.
+        
+        Photo analysis task:
+        {question}
+        
+        Provide your analysis in English, focusing on actionable feedback and specific improvements.
+        Be sure to include a clear rating out of 5 stars in your response.
+        """
+        
+        simple_prompt = PromptTemplate.from_template(simplified_prompt)
+        chain = simple_prompt | model
+        response = chain.invoke({"question": question})
+    
+    return response
