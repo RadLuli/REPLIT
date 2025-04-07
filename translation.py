@@ -1,7 +1,15 @@
 import os
-from transformers import pipeline, AutoModelForSeq2SeqLM, AutoTokenizer
+import sys
 import requests
 import urllib.parse
+
+# Try to import transformers, but handle the case when it's not available
+HAS_TRANSFORMERS = False
+try:
+    from transformers import pipeline, AutoModelForSeq2SeqLM, AutoTokenizer
+    HAS_TRANSFORMERS = True
+except ImportError:
+    print("Warning: transformers library not available, using fallback translation methods")
 
 def get_google_translate_api():
     """Get Google Translate API key from environment variable"""
@@ -18,6 +26,11 @@ def translate_with_huggingface(text, target_lang="pt-br"):
     Returns:
         str: Translated text
     """
+    # Check if transformers is available
+    if not HAS_TRANSFORMERS:
+        print("Transformers library not available, skipping Hugging Face translation")
+        return text  # Will fall back to the next method
+    
     try:
         # Load Helsinki-NLP's translation model
         model_name = "Helsinki-NLP/opus-mt-en-ROMANCE"

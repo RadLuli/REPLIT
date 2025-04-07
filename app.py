@@ -26,8 +26,40 @@ st.set_page_config(
 
 # Initialize session state variables if they don't exist
 if 'model' not in st.session_state:
-    with st.spinner('Carregando modelo LLM...'):
-        st.session_state.model = load_llama_model()
+    try:
+        with st.spinner('Carregando modelo LLM...'):
+            st.session_state.model = load_llama_model()
+    except Exception as e:
+        st.warning(f"Não foi possível carregar o modelo LLM: {str(e)}")
+        # Create a simple mock model
+        from langchain.llms.fake import FakeListLLM
+        
+        responses = [
+            """
+            Rating: 3/5 stars
+            
+            Technical Assessment:
+            The photograph shows reasonable technical quality with adequate sharpness and a balanced exposure. The composition follows basic principles but could be improved for greater visual impact.
+            
+            Strengths:
+            - Appropriate exposure for the main subject
+            - Decent color balance
+            - Clear subject identification
+            
+            Areas for Improvement:
+            - Consider applying the rule of thirds more deliberately
+            - Increase the contrast slightly to add visual impact
+            - Pay attention to the background elements that may distract from the subject
+            
+            Post-processing Tips:
+            - Try enhancing contrast by about 10-15%
+            - Slightly increase saturation for more vibrant colors
+            - Consider a subtle vignette to direct attention to the subject
+            """
+        ]
+        
+        st.session_state.model = FakeListLLM(responses=responses)
+        st.session_state.model_status = "fallback"
 
 if 'documents' not in st.session_state:
     st.session_state.documents = []
@@ -52,6 +84,9 @@ if 'enhanced_image' not in st.session_state:
 
 if 'enhancement_type' not in st.session_state:
     st.session_state.enhancement_type = None
+
+if 'model_status' not in st.session_state:
+    st.session_state.model_status = "normal"
 
 
 # Title and description
