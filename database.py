@@ -144,15 +144,16 @@ class SimpleDB:
         return data.get(image_id)
     
     @classmethod
-    def save_user(cls, username, password_hash, email=None, name=None):
+    def save_user(cls, username, password_hash=None, email=None, name=None, google_id=None):
         """
         Save or update user information
         
         Args:
             username: Username (unique identifier)
-            password_hash: Hashed password
+            password_hash: Hashed password (None for OAuth users)
             email: User's email (optional)
             name: User's name (optional)
+            google_id: Google user ID for OAuth users (optional)
         """
         data = cls.load_data(USER_DATA_FILE)
         
@@ -160,12 +161,31 @@ class SimpleDB:
         if username not in data:
             data[username] = {
                 'username': username,
-                'password_hash': password_hash,
                 'created_at': datetime.datetime.now().isoformat(),
             }
+            
+            # Set password hash only if provided (regular users)
+            if password_hash:
+                data[username]['password_hash'] = password_hash
+                
+            # Set OAuth data if provided
+            if google_id:
+                data[username]['google_id'] = google_id
+                data[username]['auth_type'] = 'google'
+            else:
+                data[username]['auth_type'] = 'local'
         else:
-            data[username]['password_hash'] = password_hash
+            # Update existing user
             data[username]['updated_at'] = datetime.datetime.now().isoformat()
+            
+            # Update password if provided
+            if password_hash:
+                data[username]['password_hash'] = password_hash
+                
+            # Update OAuth data if provided
+            if google_id:
+                data[username]['google_id'] = google_id
+                data[username]['auth_type'] = 'google'
         
         # Add optional fields if provided
         if email:
@@ -174,6 +194,26 @@ class SimpleDB:
             data[username]['name'] = name
         
         cls.save_data(USER_DATA_FILE, data)
+        return data[username]
+    
+    @classmethod
+    def get_user_by_google_id(cls, google_id):
+        """
+        Get user by Google ID
+        
+        Args:
+            google_id: Google ID to look up
+            
+        Returns:
+            User dictionary or None if not found
+        """
+        data = cls.load_data(USER_DATA_FILE)
+        
+        for username, user_data in data.items():
+            if user_data.get('google_id') == google_id:
+                return user_data
+                
+        return None
     
     @classmethod
     def get_user(cls, username):
@@ -190,13 +230,14 @@ class SimpleDB:
         return data.get(username)
     
     @classmethod
-    def authenticate_user(cls, username, password_hash):
+    def authenticate_user(cls, username, password_hash=None, google_id=None):
         """
         Verify user credentials
         
         Args:
             username: Username to authenticate
-            password_hash: Hashed password to verify
+            password_hash: Hashed password to verify (None for OAuth users)
+            google_id: Google ID to verify (None for regular users)
             
         Returns:
             Boolean indicating if authentication was successful
@@ -205,7 +246,13 @@ class SimpleDB:
         if not user:
             return False
         
-        return user['password_hash'] == password_hash
+        # Check authentication type
+        if google_id and user.get('auth_type') == 'google':
+            return user.get('google_id') == google_id
+        elif password_hash and user.get('auth_type', 'local') == 'local':
+            return user.get('password_hash') == password_hash
+        
+        return False
 
 # Try to import PostgreSQL libraries if available
 try:
@@ -227,9 +274,11 @@ try:
         
         id = Column(Integer, primary_key=True)
         username = Column(String(50), unique=True, nullable=False)
-        password_hash = Column(String(100), nullable=False)
+        password_hash = Column(String(100), nullable=True)  # Can be null for OAuth users
         email = Column(String(100))
         name = Column(String(100))
+        google_id = Column(String(100), nullable=True, unique=True)  # Google OAuth ID
+        auth_type = Column(String(20), default='local')  # 'local' or 'google'
         created_at = Column(DateTime, default=datetime.datetime.utcnow)
         updated_at = Column(DateTime, onupdate=datetime.datetime.utcnow)
         
@@ -296,7 +345,7 @@ try:
             return Session()
         
         @classmethod
-        def save_user(cls, username, password_hash, email=None, name=None):
+        def save_user(cls, username, password_hash=None, email=None, name=None, google_id=None):
             """Save or update a user"""
             session = cls.get_session()
             
@@ -304,29 +353,81 @@ try:
                 # Check if user exists
                 user = session.query(User).filter_by(username=username).first()
                 
+                # Also check if a user with this google_id already exists
+                if google_id:
+                    google_user = session.query(User).filter_by(google_id=google_id).first()
+                    if google_user and (not user or google_user.id != user.id):
+                        # User already exists with this Google ID but different username
+                        return False
+                
                 if not user:
                     # Create new user
                     user = User(
                         username=username,
                         password_hash=password_hash,
                         email=email,
-                        name=name
+                        name=name,
+                        google_id=google_id,
+                        auth_type='google' if google_id else 'local'
                     )
                     session.add(user)
                 else:
                     # Update existing user
-                    user.password_hash = password_hash
+                    if password_hash:
+                        user.password_hash = password_hash
                     if email:
                         user.email = email
                     if name:
                         user.name = name
+                    if google_id:
+                        user.google_id = google_id
+                        user.auth_type = 'google'
                 
                 session.commit()
-                return True
+                
+                # Convert to dictionary for response
+                user_dict = {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'name': user.name,
+                    'auth_type': user.auth_type,
+                    'created_at': user.created_at.isoformat() if user.created_at else None,
+                    'updated_at': user.updated_at.isoformat() if user.updated_at else None
+                }
+                return user_dict
             except Exception as e:
                 session.rollback()
                 print(f"Database error saving user: {str(e)}")
                 return False
+            finally:
+                session.close()
+        
+        @classmethod
+        def get_user_by_google_id(cls, google_id):
+            """Get user by Google ID"""
+            session = cls.get_session()
+            
+            try:
+                user = session.query(User).filter_by(google_id=google_id).first()
+                if not user:
+                    return None
+                
+                # Convert to dictionary
+                return {
+                    'id': user.id,
+                    'username': user.username,
+                    'password_hash': user.password_hash,
+                    'email': user.email,
+                    'name': user.name,
+                    'google_id': user.google_id,
+                    'auth_type': user.auth_type,
+                    'created_at': user.created_at.isoformat() if user.created_at else None,
+                    'updated_at': user.updated_at.isoformat() if user.updated_at else None
+                }
+            except Exception as e:
+                print(f"Database error getting user by Google ID: {str(e)}")
+                return None
             finally:
                 session.close()
         
@@ -347,6 +448,8 @@ try:
                     'password_hash': user.password_hash,
                     'email': user.email,
                     'name': user.name,
+                    'google_id': user.google_id,
+                    'auth_type': user.auth_type,
                     'created_at': user.created_at.isoformat() if user.created_at else None,
                     'updated_at': user.updated_at.isoformat() if user.updated_at else None
                 }
@@ -357,13 +460,19 @@ try:
                 session.close()
         
         @classmethod
-        def authenticate_user(cls, username, password_hash):
+        def authenticate_user(cls, username, password_hash=None, google_id=None):
             """Verify user credentials"""
             user = cls.get_user(username)
             if not user:
                 return False
             
-            return user['password_hash'] == password_hash
+            # Check authentication type
+            if google_id and user.get('auth_type') == 'google':
+                return user.get('google_id') == google_id
+            elif password_hash and user.get('auth_type', 'local') == 'local':
+                return user.get('password_hash') == password_hash
+            
+            return False
         
         @classmethod
         def save_image_analysis(cls, image_id, username, image_data, analysis_results, 

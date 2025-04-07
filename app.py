@@ -3,9 +3,13 @@ import os
 import tempfile
 import base64
 import uuid
+import secrets
+import json
 from datetime import datetime
 from PIL import Image
 import io
+from io import BytesIO
+from urllib.parse import urlencode
 
 from image_processor import (
     analyze_image, 
@@ -20,6 +24,7 @@ from llm_integration import load_llama_model
 from translation import translate_to_portuguese
 from utils import get_file_extension, display_rating_stars
 from database import DB
+from google_auth import get_auth_url, exchange_code_for_token, get_user_info, validate_state, GoogleAuthError
 
 # Helper functions for authentication
 def hash_password(password):
@@ -27,30 +32,158 @@ def hash_password(password):
     import hashlib
     return hashlib.sha256(password.encode()).hexdigest()
 
+def generate_google_auth_url():
+    """Generate Google OAuth authorization URL"""
+    # Create a redirect URI that Streamlit can handle
+    base_url = st.experimental_get_query_params().get('base_url', [''])[0] or '/'
+    redirect_uri = f"{base_url}google-auth-callback"
+    
+    try:
+        # Get the authorization URL from the Google Auth module
+        auth_url, auth_state = get_auth_url(redirect_uri)
+        
+        # Store the state in session
+        st.session_state.google_auth_state = auth_state
+        
+        return auth_url
+    except Exception as e:
+        st.error(f"Erro ao gerar URL de autenticação Google: {str(e)}")
+        return None
+
+def handle_google_auth_callback():
+    """Handle the callback from Google OAuth"""
+    # Get query parameters
+    query_params = st.experimental_get_query_params()
+    code = query_params.get('code', [None])[0]
+    state = query_params.get('state', [None])[0]
+    error = query_params.get('error', [None])[0]
+    
+    # Check for errors
+    if error:
+        st.error(f"Erro de autenticação Google: {error}")
+        return False
+    
+    # Check if code and state are present
+    if not code or not state:
+        st.warning("Parâmetros de autenticação incompletos")
+        return False
+    
+    # Check if we have stored state
+    if 'google_auth_state' not in st.session_state:
+        st.error("Estado de autenticação perdido. Por favor, tente novamente.")
+        return False
+    
+    try:
+        # Validate state
+        stored_state = st.session_state.google_auth_state.get('state')
+        validate_state(state, stored_state)
+        
+        # Get code verifier and redirect URI from stored state
+        code_verifier = st.session_state.google_auth_state.get('code_verifier')
+        redirect_uri = st.session_state.google_auth_state.get('redirect_uri')
+        
+        # Exchange code for token
+        token_response = exchange_code_for_token(code, code_verifier, redirect_uri)
+        access_token = token_response.get('access_token')
+        
+        # Get user info
+        user_info = get_user_info(access_token)
+        
+        # Extract user data
+        google_id = user_info.get('id')
+        email = user_info.get('email')
+        name = user_info.get('name')
+        
+        # Check if user exists by Google ID
+        user = DB.get_user_by_google_id(google_id)
+        
+        if user:
+            # User exists, log them in
+            st.session_state.logged_in = True
+            st.session_state.username = user.get('username')
+            st.session_state.auth_type = 'google'
+            
+            # Clear the URL parameters
+            st.experimental_set_query_params()
+            return True
+        else:
+            # Create a new username based on email
+            username_base = email.split('@')[0]
+            username = username_base
+            counter = 1
+            
+            # Check if username exists
+            while DB.get_user(username):
+                username = f"{username_base}{counter}"
+                counter += 1
+            
+            # Save the new user
+            DB.save_user(username, None, email, name, google_id)
+            
+            # Log them in
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.session_state.auth_type = 'google'
+            
+            # Clear the URL parameters
+            st.experimental_set_query_params()
+            return True
+    except Exception as e:
+        st.error(f"Erro durante a autenticação Google: {str(e)}")
+        return False
+
 def login():
     """Handle user login"""
     st.header("Login")
     
+    # Check if we're in a callback from Google OAuth
+    query_params = st.experimental_get_query_params()
+    if 'code' in query_params and 'state' in query_params:
+        if handle_google_auth_callback():
+            st.success("Login com Google realizado com sucesso!")
+            st.rerun()
+            return True
+    
     username = st.text_input("Nome de Usuário")
     password = st.text_input("Senha", type="password")
     
-    if st.button("Entrar"):
-        if not username or not password:
-            st.error("Por favor, preencha todos os campos")
-            return False
-        
-        # Hash the password
-        hashed_password = hash_password(password)
-        
-        # Authenticate user
-        if DB.authenticate_user(username, hashed_password):
-            st.session_state.logged_in = True
-            st.session_state.username = username
-            st.rerun()
-            return True
-        else:
-            st.error("Nome de usuário ou senha incorretos")
-            return False
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("Entrar"):
+            if not username or not password:
+                st.error("Por favor, preencha todos os campos")
+                return False
+            
+            # Hash the password
+            hashed_password = hash_password(password)
+            
+            # Authenticate user
+            if DB.authenticate_user(username, hashed_password):
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.session_state.auth_type = 'local'
+                st.rerun()
+                return True
+            else:
+                st.error("Nome de usuário ou senha incorretos")
+                return False
+    
+    with col2:
+        # Add Google login button
+        google_auth_url = generate_google_auth_url()
+        if google_auth_url:
+            google_login_html = f"""
+            <a href="{google_auth_url}" style="display: inline-block; 
+                background-color: #4285F4; color: white; 
+                padding: 10px 20px; text-align: center; 
+                text-decoration: none; font-size: 16px; 
+                margin: 4px 2px; cursor: pointer; 
+                border-radius: 4px;">
+                Entrar com Google
+            </a>
+            """
+            st.markdown(google_login_html, unsafe_allow_html=True)
     
     return False
 
@@ -215,6 +348,12 @@ if 'logged_in' not in st.session_state:
 if 'username' not in st.session_state:
     st.session_state.username = None
 
+if 'auth_type' not in st.session_state:
+    st.session_state.auth_type = None
+    
+if 'google_auth_state' not in st.session_state:
+    st.session_state.google_auth_state = None
+
 if 'image_id' not in st.session_state:
     st.session_state.image_id = None
 
@@ -257,6 +396,13 @@ Usuário logado: **{st.session_state.username}**
 with st.sidebar:
     # User management section
     st.subheader(f"Usuário: {st.session_state.username}")
+    
+    # Show authentication type
+    if st.session_state.auth_type == 'google':
+        st.write("Logado com Google")
+    else:
+        st.write("Logado com credenciais locais")
+        
     if logout():
         st.rerun()
     
