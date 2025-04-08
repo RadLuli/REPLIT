@@ -25,6 +25,20 @@ class SimpleDB:
         if not file_path.exists():
             with open(file_path, 'w') as f:
                 json.dump(default_content or {}, f)
+        else:
+            # Check if the file is empty or has invalid JSON
+            try:
+                with open(file_path, 'r') as f:
+                    content = f.read().strip()
+                    if not content:  # File is empty
+                        with open(file_path, 'w') as f:
+                            json.dump(default_content or {}, f)
+                    else:
+                        json.loads(content)  # Test if content is valid JSON
+            except json.JSONDecodeError:
+                # If JSON is invalid, reset it
+                with open(file_path, 'w') as f:
+                    json.dump(default_content or {}, f)
     
     @staticmethod
     def load_data(file_path):

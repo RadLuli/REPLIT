@@ -36,7 +36,8 @@ def hash_password(password):
 def generate_google_auth_url():
     """Generate Google OAuth authorization URL"""
     # Create a redirect URI that Streamlit can handle
-    base_url = st.query_params.get('base_url', [''])[0] if 'base_url' in st.query_params else '/'
+    # Get the base URL for the Streamlit app
+    base_url = '/'
     redirect_uri = f"{base_url}google-auth-callback"
     
     try:
@@ -54,9 +55,15 @@ def generate_google_auth_url():
 def handle_google_auth_callback():
     """Handle the callback from Google OAuth"""
     # Get query parameters
-    code = st.query_params.get('code', [None])[0] if 'code' in st.query_params else None
-    state = st.query_params.get('state', [None])[0] if 'state' in st.query_params else None
-    error = st.query_params.get('error', [None])[0] if 'error' in st.query_params else None
+    try:
+        code = st.query_params.get('code', None)
+        state = st.query_params.get('state', None)
+        error = st.query_params.get('error', None)
+    except:
+        # Fallback for older Streamlit versions
+        code = st.experimental_get_query_params().get('code', [None])[0] if 'code' in st.experimental_get_query_params() else None
+        state = st.experimental_get_query_params().get('state', [None])[0] if 'state' in st.experimental_get_query_params() else None
+        error = st.experimental_get_query_params().get('error', [None])[0] if 'error' in st.experimental_get_query_params() else None
     
     # Check for errors
     if error:
@@ -104,7 +111,14 @@ def handle_google_auth_callback():
             st.session_state.auth_type = 'google'
             
             # Clear the URL parameters
-            st.query_params.clear()
+            try:
+                st.query_params.clear()
+            except:
+                # Fallback for older Streamlit versions
+                try:
+                    st.experimental_set_query_params()
+                except:
+                    pass
             return True
         else:
             # Create a new username based on email
@@ -126,7 +140,14 @@ def handle_google_auth_callback():
             st.session_state.auth_type = 'google'
             
             # Clear the URL parameters
-            st.query_params.clear()
+            try:
+                st.query_params.clear()
+            except:
+                # Fallback for older Streamlit versions
+                try:
+                    st.experimental_set_query_params()
+                except:
+                    pass
             return True
     except Exception as e:
         st.error(f"Erro durante a autenticação Google: {str(e)}")
@@ -137,7 +158,15 @@ def login():
     st.header("Login")
     
     # Check if we're in a callback from Google OAuth
-    if 'code' in st.query_params and 'state' in st.query_params:
+    try:
+        has_code = 'code' in st.query_params
+        has_state = 'state' in st.query_params
+    except:
+        # Fallback for older Streamlit versions
+        has_code = 'code' in st.experimental_get_query_params()
+        has_state = 'state' in st.experimental_get_query_params()
+    
+    if has_code and has_state:
         if handle_google_auth_callback():
             st.success("Login com Google realizado com sucesso!")
             st.rerun()
