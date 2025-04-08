@@ -1,1 +1,10 @@
-{}
+{
+  "Luli": {
+    "username": "Luli",
+    "created_at": "2025-04-08T00:25:29.727180",
+    "password_hash": "9042f0ce349f792e508a19e92bf5e7dacb23ba9024362acd27e88cd85226098c",
+    "auth_type": "local",
+    "email": "luli@luli.com.br",
+    "name": "Luli Radfahrer"
+  }
+}

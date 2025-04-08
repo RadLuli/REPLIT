@@ -250,12 +250,7 @@ def register():
     
     return False
 
-def logout():
-    """Handle user logout"""
-    if st.sidebar.button("Sair"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
+# No longer needed - removed logout function since authentication was removed
 
 def save_analysis_to_db():
     """Save current analysis to database"""
@@ -391,51 +386,24 @@ if 'user_gallery' not in st.session_state:
 if 'photo_tip' not in st.session_state:
     st.session_state.photo_tip = None
 
-# Check if user is logged in
+# Set default user (no login required)
 if not st.session_state.logged_in:
-    # Title and description for login page
-    st.title("Avaliação Fotográfica com IA")
-    st.markdown("""
-    Este sistema utiliza Inteligência Artificial para analisar e avaliar fotografias, 
-    fornecendo feedback e sugestões de melhoria com base em materiais de referência.
-    
-    Por favor, faça login ou registre-se para continuar.
-    """)
-    
-    # Create tabs for login and register
-    login_tab, register_tab = st.tabs(["Login", "Registrar"])
-    
-    with login_tab:
-        login()
-    
-    with register_tab:
-        register()
-    
-    # Stop the app here if not logged in
-    st.stop()
+    st.session_state.logged_in = True
+    st.session_state.username = "usuario_padrao"
+    st.session_state.auth_type = "local"
 
 # Title and description for main app
 st.title("Avaliação Fotográfica com IA")
-st.markdown(f"""
+st.markdown("""
 Este sistema utiliza Inteligência Artificial para analisar e avaliar fotografias, 
 fornecendo feedback e sugestões de melhoria com base em materiais de referência.
-
-Usuário logado: **{st.session_state.username}**
 """)
 
 # Sidebar for user management, document upload, and image history
 with st.sidebar:
-    # User management section
-    st.subheader(f"Usuário: {st.session_state.username}")
-    
-    # Show authentication type
-    if st.session_state.auth_type == 'google':
-        st.write("Logado com Google")
-    else:
-        st.write("Logado com credenciais locais")
-        
-    if logout():
-        st.rerun()
+    # Application info section
+    st.subheader("Avaliação Fotográfica com IA")
+    st.write("Versão 1.0")
     
     # Tab selection for sidebar
     sidebar_tab1, sidebar_tab2 = st.tabs(["Materiais", "Histórico"])
