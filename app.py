@@ -474,25 +474,10 @@ if not st.session_state.logged_in:
     st.session_state.username = "usuario_padrao"
     st.session_state.auth_type = "local"
 
-# Title and description for main app
-st.title("Avaliação Fotográfica com IA")
-st.markdown("""
-Este sistema utiliza Inteligência Artificial para analisar e avaliar fotografias, 
-fornecendo feedback e sugestões de melhoria com base em materiais de referência.
-""")
-
-# Sidebar for user management, document upload, and image history
+# Sidebar for document upload and image history
 with st.sidebar:
-    # Application info section
-    st.subheader("Avaliação Fotográfica com IA")
-    st.write("Versão 1.0")
-
-    # Tab selection for sidebar
-    sidebar_tab1, sidebar_tab2 = st.tabs(["Materiais", "Histórico"])
-
-    with sidebar_tab1:
-        st.header("Materiais de Referência")
-        st.markdown("Faça upload dos materiais de referência para análise fotográfica (PDF, EPUB, MOBI, AZW)")
+    st.header("Materiais de Referência")
+    st.markdown("Faça upload dos materiais de referência para análise fotográfica (PDF, EPUB, MOBI, AZW)")
 
         uploaded_docs = st.file_uploader(
             "Fazer upload de documentos", 
@@ -673,12 +658,7 @@ with tab1:
                 except Exception as e:
                     st.warning(f"Não foi possível salvar a análise no banco de dados: {str(e)}")
 
-            # Display the results
-            st.subheader("Resultados da Análise")
-            st.markdown("### Avaliação")
             display_rating_stars(st.session_state.rating)
-
-            st.markdown("### Feedback Detalhado")
             st.write(st.session_state.rag_response)
 
 with tab2:
@@ -794,13 +774,3 @@ with tab3:
             st.write(topic_tip["content"])
             st.caption(f"Tópico: {topic_tip['topic']}")
 
-# Footer
-st.markdown("---")
-st.markdown("### Sobre este Sistema")
-st.markdown("""
-Este sistema utiliza o modelo Llama para análise de imagens e recuperação aumentada por geração (RAG) 
-para fornecer feedback sobre fotografias com base em documentos de referência. 
-
-Também fornece dicas diárias de fotografia e sugestões específicas para diferentes áreas da fotografia.
-Todos os resultados, dicas e sugestões são apresentados em Português Brasileiro.
-""")
