@@ -12,31 +12,61 @@ st.set_page_config(
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Eczar:wght@400;500;600;700&family=Encode+Sans+Condensed:wght@300;400;500;600&display=swap');
-    /* Dark theme customization */
+    /* Neumorphic theme customization */
     .stApp {
-        background-color: #1E2326;
+        background-color: #e0e5ec;
     }
     
-    /* Card-like containers */
+    /* Card-like containers with neumorphic effect */
     .element-container {
-        background-color: #2A2E32;
+        background-color: #e0e5ec;
         border-radius: 15px;
-        padding: 1rem;
-        margin: 0.5rem 0;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: 9px 9px 16px rgb(163,177,198,0.6), 
+                   -9px -9px 16px rgba(255,255,255, 0.5);
     }
     
-    /* Buttons */
+    /* Neumorphic buttons */
     .stButton button {
-        background-color: #4A4D4F;
-        color: white;
+        background: linear-gradient(145deg, #e0e5ec, #ffffff);
+        color: #4A4D4F;
         border-radius: 25px;
         border: none;
-        padding: 0.5rem 2rem;
+        padding: 0.7rem 2.2rem;
         transition: all 0.3s ease;
+        box-shadow: 5px 5px 10px rgb(163,177,198,0.6), 
+                   -5px -5px 10px rgba(255,255,255, 0.5);
     }
     
     .stButton button:hover {
-        background-color: #5A5D5F;
+        box-shadow: inset 5px 5px 10px rgb(163,177,198,0.6), 
+                   inset -5px -5px 10px rgba(255,255,255, 0.5);
+    }
+    
+    /* Neumorphic file uploader */
+    .stFileUploader {
+        background: #e0e5ec;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: inset 5px 5px 10px rgb(163,177,198,0.6), 
+                   inset -5px -5px 10px rgba(255,255,255, 0.5);
+    }
+    
+    /* Neumorphic selectbox */
+    .stSelectbox {
+        background: #e0e5ec;
+        border-radius: 10px;
+        box-shadow: 5px 5px 10px rgb(163,177,198,0.6), 
+                   -5px -5px 10px rgba(255,255,255, 0.5);
+    }
+    
+    /* Text elements */
+    h1, h2, h3 {
+        color: #2D3436 !important;
+        font-family: 'Eczar', serif !important;
+        font-weight: 500;
+        text-shadow: 2px 2px 4px rgba(163,177,198,0.6);
     }
     
     /* Image containers */
