@@ -245,8 +245,8 @@ def generate_rag_response(image_analysis, documents, model):
         Be sure to include a clear rating out of 5 stars in your response.
         """
         
-        simple_prompt = PromptTemplate.from_template(simplified_prompt)
-        chain = simple_prompt | model
-        response = chain.invoke({"question": question})
+        # Format the prompt and invoke the model directly when not using LangChain
+        formatted_prompt = simplified_prompt.replace("{question}", question)
+        response = model.invoke(formatted_prompt)
     
     return response
