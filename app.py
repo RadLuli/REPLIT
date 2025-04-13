@@ -544,7 +544,7 @@ with tab1:
         # Display the uploaded image
         image = Image.open(uploaded_file)
         st.session_state.processed_image = image
-        st.image(image, caption="Fotografia enviada", use_column_width=True)
+        st.image(image, caption="Fotografia enviada", use_container_width=True)
         
         # Option to analyze the image
         if st.button("Analisar Fotografia"):
@@ -646,7 +646,7 @@ with tab2:
         
         with col2:
             if st.session_state.enhanced_image is not None:
-                st.image(st.session_state.enhanced_image, caption=f"Imagem com ajuste de {st.session_state.enhancement_type} aplicado", use_column_width=True)
+                st.image(st.session_state.enhanced_image, caption=f"Imagem com ajuste de {st.session_state.enhancement_type} aplicado", use_container_width=True)
                 
                 # Save enhanced image button
                 buf = io.BytesIO()
