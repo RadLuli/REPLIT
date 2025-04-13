@@ -1,3 +1,59 @@
+
+import streamlit as st
+
+# Custom CSS for dark minimal UI
+st.markdown("""
+<style>
+    /* Dark theme customization */
+    .stApp {
+        background-color: #1E2326;
+    }
+    
+    /* Card-like containers */
+    .element-container {
+        background-color: #2A2E32;
+        border-radius: 15px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+    }
+    
+    /* Buttons */
+    .stButton button {
+        background-color: #4A4D4F;
+        color: white;
+        border-radius: 25px;
+        border: none;
+        padding: 0.5rem 2rem;
+        transition: all 0.3s ease;
+    }
+    
+    .stButton button:hover {
+        background-color: #5A5D5F;
+    }
+    
+    /* Image containers */
+    .stImage {
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    
+    /* File uploader */
+    .stFileUploader {
+        border-radius: 15px;
+        border: 2px dashed #4A4D4F;
+        padding: 1rem;
+    }
+    
+    /* Headers */
+    h1, h2, h3 {
+        color: white !important;
+        font-weight: 300;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Rest of your existing app.py code...
+
 import streamlit as st
 import os
 import tempfile

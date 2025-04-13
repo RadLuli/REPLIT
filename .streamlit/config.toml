@@ -1,11 +1,12 @@
+
+[theme]
+primaryColor = "#4A4D4F"
+backgroundColor = "#1E2326"
+secondaryBackgroundColor = "#2A2E32"
+textColor = "#FFFFFF"
+font = "sans serif"
+
 [server]
 headless = true
 address = "0.0.0.0"
 port = 5000
-
-[theme]
-primaryColor = "#4285F4"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F0F2F6"
-textColor = "#262730"
-font = "sans serif"
