@@ -4,15 +4,13 @@ primaryColor = "#4285F4"
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F0F2F6"
 textColor = "#262730"
+font = "Encode Sans Condensed"
 
 [server]
 headless = true
 enableCORS = false
 address = "0.0.0.0"
 port = 5000
-
-[theme]
-font = "Encode Sans Condensed"
 
 [client]
 toolbarMode = "minimal"
