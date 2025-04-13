@@ -479,7 +479,7 @@ with st.sidebar:
     st.header("Materiais de Referência")
     st.markdown("Faça upload dos materiais de referência para análise fotográfica (PDF, EPUB, MOBI, AZW)")
 
-        uploaded_docs = st.file_uploader(
+uploaded_docs = st.file_uploader(
             "Fazer upload de documentos", 
             type=["pdf", "epub", "mobi", "azw"], 
             accept_multiple_files=True
