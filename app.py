@@ -750,4 +750,4 @@ with tab3:
     # Get a different tip
     if st.button("Nova Dica"):
         with st.spinner('Gerando nova dica de fotografia...'):
-            st.session_state.
+            st.session_state.photo_tip = get_tip_of_the_day(st.session_state.model)
