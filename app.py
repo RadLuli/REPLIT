@@ -10,95 +10,76 @@ st.set_page_config(
 # Import Google Fonts and set custom CSS
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Eczar:wght@400;500;600;700&family=Encode+Sans+Condensed:wght@300;400;500;600&display=swap');
-    /* Dark neumorphic theme customization */
+    @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap');
+    /* Modern dark theme customization */
     .stApp {
-        background-color: #1E2326;
+        background-color: #1A1C1E;
     }
 
-    /* Card-like containers with neumorphic effect */
+    /* Card-like containers */
     .element-container {
-        background-color: #262d33;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 9px 9px 16px rgb(163,177,198,0.6), 
-                   -9px -9px 16px rgba(255,255,255, 0.5);
-    }
-
-    /* Neumorphic buttons */
-    .stButton button {
-        background: linear-gradient(145deg, #262d33, #333a40);
-        color: #d1d5db;
-        border-radius: 25px;
-        border: none;
-        padding: 0.7rem 2.2rem;
-        transition: all 0.3s ease;
-        box-shadow: 5px 5px 10px rgb(163,177,198,0.6), 
-                   -5px -5px 10px rgba(255,255,255, 0.5);
-    }
-
-    .stButton button:hover {
-        box-shadow: inset 5px 5px 10px rgb(163,177,198,0.6), 
-                   inset -5px -5px 10px rgba(255,255,255, 0.5);
-    }
-
-    /* Neumorphic file uploader */
-    .stFileUploader {
-        background: #262d33;
-        border-radius: 15px;
-        padding: 2rem;
-        box-shadow: inset 5px 5px 10px rgb(163,177,198,0.6), 
-                   inset -5px -5px 10px rgba(255,255,255, 0.5);
-    }
-
-    /* Neumorphic selectbox */
-    .stSelectbox {
-        background: #262d33;
-        border-radius: 10px;
-        box-shadow: 5px 5px 10px rgb(163,177,198,0.6), 
-                   -5px -5px 10px rgba(255,255,255, 0.5);
+        background-color: #232527;
+        border-radius: 8px;
+        padding: 1.25rem;
+        margin: 0.75rem 0;
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     /* Text elements */
     h1, h2, h3 {
-        color: #d1d5db !important;
-        font-family: 'Eczar', serif !important;
-        font-weight: 500;
-        text-shadow: 2px 2px 4px rgba(163,177,198,0.6);
-    }
-
-    /* Image containers */
-    .stImage {
-        border-radius: 15px;
-        overflow: hidden;
-    }
-
-    /* File uploader */
-    .stFileUploader {
-        border-radius: 15px;
-        border: 2px dashed #d1d5db;
-        padding: 1rem;
-    }
-
-    /* Headers */
-    h1, h2, h3 {
-        color: #d1d5db !important;
-        font-family: 'Eczar', serif !important;
-        font-weight: 500;
+        color: white !important;
+        font-family: 'Barlow Condensed', sans-serif !important;
+        font-weight: 600;
+        letter-spacing: 0.5px;
     }
 
     /* Body text */
     body, p, div, span {
-        font-family: 'Encode Sans Condensed', sans-serif !important;
-        color: #d1d5db;
+        font-family: 'Montserrat', sans-serif !important;
+        color: rgba(255, 255, 255, 0.87);
     }
 
     /* Streamlit elements */
     .stMarkdown, .stText {
-        font-family: 'Encode Sans Condensed', sans-serif !important;
-        color: #d1d5db;
+        font-family: 'Montserrat', sans-serif !important;
+        color: rgba(255, 255, 255, 0.87);
     }
+
+    /* File uploader */
+    .stFileUploader {
+        border-radius: 8px;
+        border: 1px dashed rgba(255, 255, 255, 0.2);
+        padding: 1rem;
+        background-color: #232527;
+    }
+
+    /* Selectbox and other inputs */
+    .stSelectbox, .stTextInput {
+        background-color: #232527;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Buttons */
+    .stButton button {
+        background-color: #28a745; /* Green */
+        color: white;
+        border: none;
+        padding: 0.7rem 1.5rem;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    .stButton button:hover {
+        background-color: #218838; /* Darker green on hover */
+    }
+
+    /* Image containers */
+    .stImage {
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
