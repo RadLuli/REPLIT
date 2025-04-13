@@ -479,38 +479,38 @@ with st.sidebar:
     st.header("Materiais de Referência")
     st.markdown("Faça upload dos materiais de referência para análise fotográfica (PDF, EPUB, MOBI, AZW)")
 
-uploaded_docs = st.file_uploader(
-            "Fazer upload de documentos", 
-            type=["pdf", "epub", "mobi", "azw"], 
-            accept_multiple_files=True
-        )
+    uploaded_docs = st.file_uploader(
+        "Fazer upload de documentos", 
+        type=["pdf", "epub", "mobi", "azw"], 
+        accept_multiple_files=True
+    )
 
-    with sidebar_tab2:
-        st.header("Histórico de Análises")
+    # Placeholder for additional sidebar content
+    st.header("Histórico de Análises")
 
         # Load user's image history
         try:
             user_images = DB.get_user_images(st.session_state.username)
             st.session_state.user_gallery = user_images
-
+    
             if user_images:
                 st.write(f"Você tem {len(user_images)} imagens analisadas")
-
+    
                 for i, img_data in enumerate(user_images):
                     st.markdown(f"**{i+1}. Imagem analisada em {img_data['upload_date'][:10]}**")
-
+    
                     if img_data['thumbnail']:
                         # Display a smaller thumbnail
                         st.image(f"data:image/png;base64,{img_data['thumbnail']}", width=100)
-
+    
                     if img_data['latest_analysis'] and 'rating' in img_data['latest_analysis']:
                         st.write(f"Classificação: {img_data['latest_analysis']['rating']}/5")
-
+    
                     # Button to load this image and its analysis
                     if st.button(f"Carregar análise #{i+1}", key=f"load_img_{img_data['id']}"):
                         # Get full image details
                         image_details = DB.get_image_details(img_data['id'])
-
+    
                         if image_details and image_details['analysis_history']:
                             # Get the first entry with image data
                             first_entry = image_details['analysis_history'][0]
@@ -520,36 +520,36 @@ uploaded_docs = st.file_uploader(
                                 from io import BytesIO
                                 img_bytes = base64.b64decode(first_entry['image_data'])
                                 img = Image.open(BytesIO(img_bytes))
-
+    
                                 # Update session state
                                 st.session_state.processed_image = img
                                 st.session_state.image_id = img_data['id']
-
+    
                                 # Get the most recent analysis
                                 latest_analysis = image_details['analysis_history'][-1]
                                 if 'analysis_results' in latest_analysis:
                                     results = latest_analysis['analysis_results']
-
+    
                                     if 'rating' in results:
                                         st.session_state.rating = results['rating']
-
+    
                                     if 'analysis' in results:
                                         st.session_state.rag_response = results['analysis']
-
+    
                                     if 'technical_data' in results:
                                         st.session_state.image_analysis = results['technical_data']
-
+    
                                 # Check if there's an enhancement
                                 if 'enhancement' in latest_analysis:
                                     enhancement = latest_analysis['enhancement']
                                     st.session_state.enhancement_type = enhancement['type']
-
+    
                                     # Load enhanced image if available
                                     if 'image_data' in enhancement:
                                         enhanced_img_bytes = base64.b64decode(enhancement['image_data'])
                                         enhanced_img = Image.open(BytesIO(enhanced_img_bytes))
                                         st.session_state.enhanced_image = enhanced_img
-
+    
                                 st.success("Análise carregada com sucesso!")
                                 st.rerun()
             else:
@@ -598,6 +598,7 @@ uploaded_docs = st.file_uploader(
     else:
         st.info("Nenhum documento de referência foi carregado ainda.")
 
+# Main content area with tabs 
 # Main content area with tabs
 tab1, tab2, tab3 = st.tabs(["Análise de Fotografia", "Melhorias Sugeridas", "Dica do Dia"])
 
