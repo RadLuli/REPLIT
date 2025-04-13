@@ -193,9 +193,9 @@ def handle_google_auth_callback():
 
         if user:
             # User exists, log them in
-            st.session_state.logged_in = True
-            st.session_state.username = user.get('username')
-            st.session_state.auth_type = 'google'
+        st.session_state.logged_in = True
+        st.session_state.username = user.get('username')
+        st.session_state.auth_type = 'google'
 
             # Clear the URL parameters
             try:
@@ -387,7 +387,7 @@ def save_analysis_to_db():
 if 'model' not in st.session_state:
     try:
         with st.spinner('Carregando modelo LLM...'):
-            st.session_state.model = load_llama_model()
+        st.session_state.model = load_llama_model()
     except Exception as e:
         st.warning(f"Não foi possível carregar o modelo LLM: {str(e)}")
         # Create a simple mock model
@@ -567,9 +567,9 @@ st.markdown(f"**{i+1}. Imagem analisada em {img_data['upload_date'][:10]}**")
                     try:
                         doc_content = process_document(tmp_path)
                         st.session_state.documents.append({
-                            'name': doc.name,
-                            'content': doc_content,
-                            'type': get_file_extension(doc.name)
+                        'name': doc.name,
+                        'content': doc_content,
+                        'type': get_file_extension(doc.name)
                         })
                         st.success(f"Documento '{doc.name}' processado com sucesso!")
                     except Exception as e:
@@ -635,22 +635,22 @@ with tab1:
                 try:
                     # Very simple rating extraction for demo purposes
                     if "classificação: 5" in portuguese_response.lower() or "rating: 5" in portuguese_response.lower():
-                        st.session_state.rating = 5
+                    st.session_state.rating = 5
                     elif "classificação: 4" in portuguese_response.lower() or "rating: 4" in portuguese_response.lower():
-                        st.session_state.rating = 4
+                    st.session_state.rating = 4
                     elif "classificação: 3" in portuguese_response.lower() or "rating: 3" in portuguese_response.lower():
-                        st.session_state.rating = 3
+                    st.session_state.rating = 3
                     elif "classificação: 2" in portuguese_response.lower() or "rating: 2" in portuguese_response.lower():
-                        st.session_state.rating = 2
+                    st.session_state.rating = 2
                     else:
-                        st.session_state.rating = 1
+                    st.session_state.rating = 1
                 except:
                     st.session_state.rating = 3  # Default rating if extraction fails
 
                 # Save analysis to database
                 try:
                     if save_analysis_to_db():
-                        st.success("Análise salva no banco de dados!")
+                    st.success("Análise salva no banco de dados!")
                 except Exception as e:
                     st.warning(f"Não foi possível salvar a análise no banco de dados: {str(e)}")
 
@@ -719,7 +719,7 @@ with tab2:
 
                         # Save to database
                         if save_analysis_to_db():
-                            st.success("Imagem melhorada salva no banco de dados!")
+                        st.success("Imagem melhorada salva no banco de dados!")
                     except Exception as e:
                         st.warning(f"Não foi possível salvar a imagem melhorada: {str(e)}")
 
