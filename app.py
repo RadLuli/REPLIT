@@ -8,9 +8,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS for dark minimal UI
+# Import Google Fonts and set custom CSS
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Eczar:wght@400;500;600;700&family=Encode+Sans+Condensed:wght@300;400;500;600&display=swap');
     /* Dark theme customization */
     .stApp {
         background-color: #1E2326;
@@ -54,7 +55,18 @@ st.markdown("""
     /* Headers */
     h1, h2, h3 {
         color: white !important;
-        font-weight: 300;
+        font-family: 'Eczar', serif !important;
+        font-weight: 500;
+    }
+    
+    /* Body text */
+    body, p, div, span {
+        font-family: 'Encode Sans Condensed', sans-serif !important;
+    }
+    
+    /* Streamlit elements */
+    .stMarkdown, .stText {
+        font-family: 'Encode Sans Condensed', sans-serif !important;
     }
 </style>
 """, unsafe_allow_html=True)
