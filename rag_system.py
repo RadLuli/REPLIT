@@ -195,9 +195,18 @@ def generate_rag_response(image_analysis, documents, model):
     Be sure to include a clear rating out of 5 stars in your response.
     """
     
-    prompt = PromptTemplate.from_template(template)
+    if HAS_LANGCHAIN:
+        prompt = PromptTemplate.from_template(template)
+    else:
+        # Simple template substitution when LangChain is not available
+        def simple_prompt(variables):
+            result = template
+            for key, value in variables.items():
+                result = result.replace("{" + key + "}", str(value))
+            return result
+        prompt = simple_prompt
     
-    if retriever:
+    if retriever and HAS_LANGCHAIN:
         # Create RAG chain with retrieval
         rag_chain = (
             {"context": retriever | format_docs, "question": RunnablePassthrough()}
@@ -207,6 +216,12 @@ def generate_rag_response(image_analysis, documents, model):
         
         # Run the chain
         response = rag_chain.invoke(question)
+    elif retriever:
+        # Simple fallback when LangChain is not available
+        docs = retriever.get_relevant_documents(question)
+        context = format_docs(docs)
+        formatted_prompt = prompt({"context": context, "question": question})
+        response = model(formatted_prompt)
     else:
         # If no documents, just use the LLM with a simplified prompt
         simplified_prompt = """
