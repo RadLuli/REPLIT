@@ -1,4 +1,15 @@
 import streamlit as st
+import os
+import tempfile
+import base64
+import uuid
+import secrets
+import json
+from datetime import datetime
+from PIL import Image
+import io
+from io import BytesIO
+from urllib.parse import urlencode
 
 # Set page configuration first
 st.set_page_config(
@@ -79,24 +90,8 @@ st.markdown("""
         border-radius: 8px;
         overflow: hidden;
     }
-
 </style>
 """, unsafe_allow_html=True)
-
-# Rest of your existing app.py code...
-
-import streamlit as st
-import os
-import tempfile
-import base64
-import uuid
-import secrets
-import json
-from datetime import datetime
-from PIL import Image
-import io
-from io import BytesIO
-from urllib.parse import urlencode
 
 from image_processor import (
     analyze_image, 
@@ -122,12 +117,11 @@ def hash_password(password):
 
 def generate_google_auth_url():
     """Generate Google OAuth authorization URL"""
-    # Create a redirect URI that Streamlit can handle
-    # Get the base URL for the Streamlit app
-    base_url = '/'
-    redirect_uri = f"{base_url}google-auth-callback"
-
     try:
+        # Create a redirect URI that Streamlit can handle
+        base_url = '/'
+        redirect_uri = f"{base_url}google-auth-callback"
+
         # Get the authorization URL from the Google Auth module
         auth_url, auth_state = get_auth_url(redirect_uri)
 
@@ -193,9 +187,9 @@ def handle_google_auth_callback():
 
         if user:
             # User exists, log them in
-        st.session_state.logged_in = True
-        st.session_state.username = user.get('username')
-        st.session_state.auth_type = 'google'
+            st.session_state.logged_in = True
+            st.session_state.username = user.get('username')
+            st.session_state.auth_type = 'google'
 
             # Clear the URL parameters
             try:
@@ -208,6 +202,7 @@ def handle_google_auth_callback():
                     pass
             return True
         else:
+            st.session_state.rating = 1
             # Create a new username based on email
             username_base = email.split('@')[0]
             username = username_base
@@ -381,13 +376,11 @@ def save_analysis_to_db():
 
     return False
 
-
-
 # Initialize session state variables if they don't exist
 if 'model' not in st.session_state:
     try:
         with st.spinner('Carregando modelo LLM...'):
-        st.session_state.model = load_llama_model()
+            st.session_state.model = load_llama_model()
     except Exception as e:
         st.warning(f"Não foi possível carregar o modelo LLM: {str(e)}")
         # Create a simple mock model
@@ -478,79 +471,83 @@ if not st.session_state.logged_in:
 with st.sidebar:
     st.header("Materiais de Referência")
     st.markdown("Faça upload dos materiais de referência para análise fotográfica (PDF, EPUB, MOBI, AZW)")
-
-uploaded_docs = st.file_uploader(
-"Fazer upload de documentos", 
-type=["pdf", "epub", "mobi", "azw"], 
-accept_multiple_files=True
-)
-# Placeholder for additional sidebar content
-st.header("Histórico de Análises")
-# Load user's image history
-try:
-user_images = DB.get_user_images(st.session_state.username)
-st.session_state.user_gallery = user_images
-if user_images:
-st.write(f"Você tem {len(user_images)} imagens analisadas")
-for i, img_data in enumerate(user_images):
-st.markdown(f"**{i+1}. Imagem analisada em {img_data['upload_date'][:10]}**")
-                    if img_data['thumbnail']:
-                        # Display a smaller thumbnail
-                        st.image(f"data:image/png;base64,{img_data['thumbnail']}", width=100)
     
-                    if img_data['latest_analysis'] and 'rating' in img_data['latest_analysis']:
-                        st.write(f"Classificação: {img_data['latest_analysis']['rating']}/5")
+    uploaded_docs = st.file_uploader(
+        "Fazer upload de documentos", 
+        type=["pdf", "epub", "mobi", "azw"], 
+        accept_multiple_files=True
+    )
     
-                    # Button to load this image and its analysis
-                    if st.button(f"Carregar análise #{i+1}", key=f"load_img_{img_data['id']}"):
-                        # Get full image details
-                        image_details = DB.get_image_details(img_data['id'])
+    # Placeholder for additional sidebar content
+    st.header("Histórico de Análises")
     
-                        if image_details and image_details['analysis_history']:
-                            # Get the first entry with image data
-                            first_entry = image_details['analysis_history'][0]
-                            if 'image_data' in first_entry:
-                                # Convert base64 back to image
-                                import base64
-                                from io import BytesIO
-                                img_bytes = base64.b64decode(first_entry['image_data'])
-                                img = Image.open(BytesIO(img_bytes))
-    
-                                # Update session state
-                                st.session_state.processed_image = img
-                                st.session_state.image_id = img_data['id']
-    
-                                # Get the most recent analysis
-                                latest_analysis = image_details['analysis_history'][-1]
-                                if 'analysis_results' in latest_analysis:
-                                    results = latest_analysis['analysis_results']
-    
-                                    if 'rating' in results:
-                                        st.session_state.rating = results['rating']
-    
-                                    if 'analysis' in results:
-                                        st.session_state.rag_response = results['analysis']
-    
-                                    if 'technical_data' in results:
-                                        st.session_state.image_analysis = results['technical_data']
-    
-                                # Check if there's an enhancement
-                                if 'enhancement' in latest_analysis:
-                                    enhancement = latest_analysis['enhancement']
-                                    st.session_state.enhancement_type = enhancement['type']
-    
-                                    # Load enhanced image if available
-                                    if 'image_data' in enhancement:
-                                        enhanced_img_bytes = base64.b64decode(enhancement['image_data'])
-                                        enhanced_img = Image.open(BytesIO(enhanced_img_bytes))
-                                        st.session_state.enhanced_image = enhanced_img
-    
-                                st.success("Análise carregada com sucesso!")
-                                st.rerun()
-            else:
-                st.info("Você ainda não tem análises salvas.")
-        except Exception as e:
-            st.error(f"Erro ao carregar histórico: {str(e)}")
+    # Load user's image history
+    try:
+        user_images = DB.get_user_images(st.session_state.username)
+        st.session_state.user_gallery = user_images
+        
+        if user_images:
+            st.write(f"Você tem {len(user_images)} imagens analisadas")
+            for i, img_data in enumerate(user_images):
+                st.markdown(f"**{i+1}. Imagem analisada em {img_data['upload_date'][:10]}**")
+                
+                if img_data['thumbnail']:
+                    # Display a smaller thumbnail
+                    st.image(f"data:image/png;base64,{img_data['thumbnail']}", width=100)
+                
+                if img_data['latest_analysis'] and 'rating' in img_data['latest_analysis']:
+                    st.write(f"Classificação: {img_data['latest_analysis']['rating']}/5")
+                
+                # Button to load this image and its analysis
+                if st.button(f"Carregar análise #{i+1}", key=f"load_img_{img_data['id']}"):
+                    # Get full image details
+                    image_details = DB.get_image_details(img_data['id'])
+                
+                    if image_details and image_details['analysis_history']:
+                        # Get the first entry with image data
+                        first_entry = image_details['analysis_history'][0]
+                        if 'image_data' in first_entry:
+                            # Convert base64 back to image
+                            import base64
+                            from io import BytesIO
+                            img_bytes = base64.b64decode(first_entry['image_data'])
+                            img = Image.open(BytesIO(img_bytes))
+                
+                            # Update session state
+                            st.session_state.processed_image = img
+                            st.session_state.image_id = img_data['id']
+                
+                            # Get the most recent analysis
+                            latest_analysis = image_details['analysis_history'][-1]
+                            if 'analysis_results' in latest_analysis:
+                                results = latest_analysis['analysis_results']
+                
+                                if 'rating' in results:
+                                    st.session_state.rating = results['rating']
+                
+                                if 'analysis' in results:
+                                    st.session_state.rag_response = results['analysis']
+                
+                                if 'technical_data' in results:
+                                    st.session_state.image_analysis = results['technical_data']
+                
+                            # Check if there's an enhancement
+                            if 'enhancement' in latest_analysis:
+                                enhancement = latest_analysis['enhancement']
+                                st.session_state.enhancement_type = enhancement['type']
+                
+                                # Load enhanced image if available
+                                if 'image_data' in enhancement:
+                                    enhanced_img_bytes = base64.b64decode(enhancement['image_data'])
+                                    enhanced_img = Image.open(BytesIO(enhanced_img_bytes))
+                                    st.session_state.enhanced_image = enhanced_img
+                
+                            st.success("Análise carregada com sucesso!")
+                            st.rerun()
+        else:
+            st.info("Você ainda não tem análises salvas.")
+    except Exception as e:
+        st.error(f"Erro ao carregar histórico: {str(e)}")
 
     if uploaded_docs:
         for doc in uploaded_docs:
@@ -567,9 +564,9 @@ st.markdown(f"**{i+1}. Imagem analisada em {img_data['upload_date'][:10]}**")
                     try:
                         doc_content = process_document(tmp_path)
                         st.session_state.documents.append({
-                        'name': doc.name,
-                        'content': doc_content,
-                        'type': get_file_extension(doc.name)
+                            'name': doc.name,
+                            'content': doc_content,
+                            'type': get_file_extension(doc.name)
                         })
                         st.success(f"Documento '{doc.name}' processado com sucesso!")
                     except Exception as e:
@@ -594,7 +591,6 @@ st.markdown(f"**{i+1}. Imagem analisada em {img_data['upload_date'][:10]}**")
         st.info("Nenhum documento de referência foi carregado ainda.")
 
 # Main content area with tabs 
-# Main content area with tabs
 tab1, tab2, tab3 = st.tabs(["Análise de Fotografia", "Melhorias Sugeridas", "Dica do Dia"])
 
 with tab1:
@@ -635,22 +631,22 @@ with tab1:
                 try:
                     # Very simple rating extraction for demo purposes
                     if "classificação: 5" in portuguese_response.lower() or "rating: 5" in portuguese_response.lower():
-                    st.session_state.rating = 5
+                        st.session_state.rating = 5
                     elif "classificação: 4" in portuguese_response.lower() or "rating: 4" in portuguese_response.lower():
-                    st.session_state.rating = 4
+                        st.session_state.rating = 4
                     elif "classificação: 3" in portuguese_response.lower() or "rating: 3" in portuguese_response.lower():
-                    st.session_state.rating = 3
+                        st.session_state.rating = 3
                     elif "classificação: 2" in portuguese_response.lower() or "rating: 2" in portuguese_response.lower():
-                    st.session_state.rating = 2
+                        st.session_state.rating = 2
                     else:
-                    st.session_state.rating = 1
+                        st.session_state.rating = 1
                 except:
                     st.session_state.rating = 3  # Default rating if extraction fails
 
                 # Save analysis to database
                 try:
                     if save_analysis_to_db():
-                    st.success("Análise salva no banco de dados!")
+                        st.success("Análise salva no banco de dados!")
                 except Exception as e:
                     st.warning(f"Não foi possível salvar a análise no banco de dados: {str(e)}")
 
@@ -719,7 +715,7 @@ with tab2:
 
                         # Save to database
                         if save_analysis_to_db():
-                        st.success("Imagem melhorada salva no banco de dados!")
+                            st.success("Imagem melhorada salva no banco de dados!")
                     except Exception as e:
                         st.warning(f"Não foi possível salvar a imagem melhorada: {str(e)}")
 
@@ -754,19 +750,4 @@ with tab3:
     # Get a different tip
     if st.button("Nova Dica"):
         with st.spinner('Gerando nova dica de fotografia...'):
-            st.session_state.photo_tip = get_tip_of_the_day(st.session_state.model, force_refresh=True)
-            st.rerun()
-
-    # Get a tip on a specific topic
-    st.subheader("Buscar Dica por Tópico")
-    from photography_tips import PHOTOGRAPHY_TIP_TOPICS
-
-    topic = st.selectbox("Selecione um tópico de fotografia:", PHOTOGRAPHY_TIP_TOPICS)
-
-    if st.button("Buscar Dica por Tópico"):
-        with st.spinner(f'Gerando dica sobre {topic}...'):
-            topic_tip = get_tip_by_topic(st.session_state.model, topic)
-            st.subheader(topic_tip["title"])
-            st.write(topic_tip["content"])
-            st.caption(f"Tópico: {topic_tip['topic']}")
-
+            st.session_state.
