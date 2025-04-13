@@ -15,11 +15,21 @@ try:
 except ImportError:
     HAS_LANGCHAIN = False
     
-    # Define a simple Document class if langchain is not available
+    # Define fallback classes if langchain is not available
     class Document:
         def __init__(self, page_content, metadata=None):
             self.page_content = page_content
             self.metadata = metadata or {}
+            
+    class PromptTemplate:
+        @staticmethod
+        def from_template(template):
+            def format_prompt(variables):
+                result = template
+                for key, value in variables.items():
+                    result = result.replace("{" + key + "}", str(value))
+                return result
+            return format_prompt
 
 def create_embeddings():
     """Create embeddings model"""
