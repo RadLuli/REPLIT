@@ -1,4 +1,3 @@
-
 import streamlit as st
 
 # Set page configuration first
@@ -12,25 +11,25 @@ st.set_page_config(
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Eczar:wght@400;500;600;700&family=Encode+Sans+Condensed:wght@300;400;500;600&display=swap');
-    /* Neumorphic theme customization */
+    /* Dark neumorphic theme customization */
     .stApp {
-        background-color: #e0e5ec;
+        background-color: #1E2326;
     }
-    
+
     /* Card-like containers with neumorphic effect */
     .element-container {
-        background-color: #e0e5ec;
+        background-color: #262d33;
         border-radius: 15px;
         padding: 1.5rem;
         margin: 1rem 0;
         box-shadow: 9px 9px 16px rgb(163,177,198,0.6), 
                    -9px -9px 16px rgba(255,255,255, 0.5);
     }
-    
+
     /* Neumorphic buttons */
     .stButton button {
-        background: linear-gradient(145deg, #e0e5ec, #ffffff);
-        color: #4A4D4F;
+        background: linear-gradient(145deg, #262d33, #333a40);
+        color: #d1d5db;
         border-radius: 25px;
         border: none;
         padding: 0.7rem 2.2rem;
@@ -38,65 +37,67 @@ st.markdown("""
         box-shadow: 5px 5px 10px rgb(163,177,198,0.6), 
                    -5px -5px 10px rgba(255,255,255, 0.5);
     }
-    
+
     .stButton button:hover {
         box-shadow: inset 5px 5px 10px rgb(163,177,198,0.6), 
                    inset -5px -5px 10px rgba(255,255,255, 0.5);
     }
-    
+
     /* Neumorphic file uploader */
     .stFileUploader {
-        background: #e0e5ec;
+        background: #262d33;
         border-radius: 15px;
         padding: 2rem;
         box-shadow: inset 5px 5px 10px rgb(163,177,198,0.6), 
                    inset -5px -5px 10px rgba(255,255,255, 0.5);
     }
-    
+
     /* Neumorphic selectbox */
     .stSelectbox {
-        background: #e0e5ec;
+        background: #262d33;
         border-radius: 10px;
         box-shadow: 5px 5px 10px rgb(163,177,198,0.6), 
                    -5px -5px 10px rgba(255,255,255, 0.5);
     }
-    
+
     /* Text elements */
     h1, h2, h3 {
-        color: #2D3436 !important;
+        color: #d1d5db !important;
         font-family: 'Eczar', serif !important;
         font-weight: 500;
         text-shadow: 2px 2px 4px rgba(163,177,198,0.6);
     }
-    
+
     /* Image containers */
     .stImage {
         border-radius: 15px;
         overflow: hidden;
     }
-    
+
     /* File uploader */
     .stFileUploader {
         border-radius: 15px;
-        border: 2px dashed #4A4D4F;
+        border: 2px dashed #d1d5db;
         padding: 1rem;
     }
-    
+
     /* Headers */
     h1, h2, h3 {
-        color: white !important;
+        color: #d1d5db !important;
         font-family: 'Eczar', serif !important;
         font-weight: 500;
     }
-    
+
     /* Body text */
     body, p, div, span {
         font-family: 'Encode Sans Condensed', sans-serif !important;
+        color: #d1d5db;
     }
-    
+
     /* Streamlit elements */
     .stMarkdown, .stText {
         font-family: 'Encode Sans Condensed', sans-serif !important;
+        color: #d1d5db;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -144,14 +145,14 @@ def generate_google_auth_url():
     # Get the base URL for the Streamlit app
     base_url = '/'
     redirect_uri = f"{base_url}google-auth-callback"
-    
+
     try:
         # Get the authorization URL from the Google Auth module
         auth_url, auth_state = get_auth_url(redirect_uri)
-        
+
         # Store the state in session
         st.session_state.google_auth_state = auth_state
-        
+
         return auth_url
     except Exception as e:
         st.error(f"Erro ao gerar URL de autenticação Google: {str(e)}")
@@ -169,52 +170,52 @@ def handle_google_auth_callback():
         code = st.experimental_get_query_params().get('code', [None])[0] if 'code' in st.experimental_get_query_params() else None
         state = st.experimental_get_query_params().get('state', [None])[0] if 'state' in st.experimental_get_query_params() else None
         error = st.experimental_get_query_params().get('error', [None])[0] if 'error' in st.experimental_get_query_params() else None
-    
+
     # Check for errors
     if error:
         st.error(f"Erro de autenticação Google: {error}")
         return False
-    
+
     # Check if code and state are present
     if not code or not state:
         st.warning("Parâmetros de autenticação incompletos")
         return False
-    
+
     # Check if we have stored state
     if 'google_auth_state' not in st.session_state:
         st.error("Estado de autenticação perdido. Por favor, tente novamente.")
         return False
-    
+
     try:
         # Validate state
         stored_state = st.session_state.google_auth_state.get('state')
         validate_state(state, stored_state)
-        
+
         # Get code verifier and redirect URI from stored state
         code_verifier = st.session_state.google_auth_state.get('code_verifier')
         redirect_uri = st.session_state.google_auth_state.get('redirect_uri')
-        
+
         # Exchange code for token
         token_response = exchange_code_for_token(code, code_verifier, redirect_uri)
         access_token = token_response.get('access_token')
-        
+
         # Get user info
         user_info = get_user_info(access_token)
-        
+
         # Extract user data
         google_id = user_info.get('id')
         email = user_info.get('email')
         name = user_info.get('name')
-        
+
         # Check if user exists by Google ID
         user = DB.get_user_by_google_id(google_id)
-        
+
         if user:
             # User exists, log them in
             st.session_state.logged_in = True
             st.session_state.username = user.get('username')
             st.session_state.auth_type = 'google'
-            
+
             # Clear the URL parameters
             try:
                 st.query_params.clear()
@@ -230,20 +231,20 @@ def handle_google_auth_callback():
             username_base = email.split('@')[0]
             username = username_base
             counter = 1
-            
+
             # Check if username exists
             while DB.get_user(username):
                 username = f"{username_base}{counter}"
                 counter += 1
-            
+
             # Save the new user
             DB.save_user(username, None, email, name, google_id)
-            
+
             # Log them in
             st.session_state.logged_in = True
             st.session_state.username = username
             st.session_state.auth_type = 'google'
-            
+
             # Clear the URL parameters
             try:
                 st.query_params.clear()
@@ -261,7 +262,7 @@ def handle_google_auth_callback():
 def login():
     """Handle user login"""
     st.header("Login")
-    
+
     # Check if we're in a callback from Google OAuth
     try:
         has_code = 'code' in st.query_params
@@ -270,27 +271,27 @@ def login():
         # Fallback for older Streamlit versions
         has_code = 'code' in st.experimental_get_query_params()
         has_state = 'state' in st.experimental_get_query_params()
-    
+
     if has_code and has_state:
         if handle_google_auth_callback():
             st.success("Login com Google realizado com sucesso!")
             st.rerun()
             return True
-    
+
     username = st.text_input("Nome de Usuário")
     password = st.text_input("Senha", type="password")
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         if st.button("Entrar"):
             if not username or not password:
                 st.error("Por favor, preencha todos os campos")
                 return False
-            
+
             # Hash the password
             hashed_password = hash_password(password)
-            
+
             # Authenticate user
             if DB.authenticate_user(username, hashed_password):
                 st.session_state.logged_in = True
@@ -301,7 +302,7 @@ def login():
             else:
                 st.error("Nome de usuário ou senha incorretos")
                 return False
-    
+
     with col2:
         # Add Google login button
         google_auth_url = generate_google_auth_url()
@@ -317,42 +318,42 @@ def login():
             </a>
             """
             st.markdown(google_login_html, unsafe_allow_html=True)
-    
+
     return False
 
 def register():
     """Handle user registration"""
     st.header("Registrar")
-    
+
     username = st.text_input("Nome de Usuário", key="reg_username")
     password = st.text_input("Senha", type="password", key="reg_password")
     confirm_password = st.text_input("Confirmar Senha", type="password")
     email = st.text_input("Email (opcional)")
     name = st.text_input("Nome Completo (opcional)")
-    
+
     if st.button("Registrar"):
         if not username or not password:
             st.error("Nome de usuário e senha são obrigatórios")
             return False
-        
+
         if password != confirm_password:
             st.error("As senhas não coincidem")
             return False
-        
+
         # Check if user already exists
         existing_user = DB.get_user(username)
         if existing_user:
             st.error("Nome de usuário já existe, escolha outro")
             return False
-        
+
         # Hash the password
         hashed_password = hash_password(password)
-        
+
         # Save user
         DB.save_user(username, hashed_password, email, name)
         st.success("Registro bem-sucedido! Faça login para continuar.")
         return True
-    
+
     return False
 
 # No longer needed - removed logout function since authentication was removed
@@ -363,12 +364,12 @@ def save_analysis_to_db():
         if 'image_id' not in st.session_state:
             # Generate a unique ID for the image
             st.session_state.image_id = str(uuid.uuid4())
-        
+
         # Convert image to base64
         buffer = BytesIO()
         st.session_state.processed_image.save(buffer, format="PNG")
         image_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        
+
         # Get analysis results
         analysis_results = {
             'rating': st.session_state.rating if 'rating' in st.session_state else None,
@@ -376,16 +377,16 @@ def save_analysis_to_db():
             'technical_data': st.session_state.image_analysis if 'image_analysis' in st.session_state else None,
             'timestamp': datetime.now().isoformat()
         }
-        
+
         # Get enhancement data if available
         enhancement_type = st.session_state.enhancement_type if 'enhancement_type' in st.session_state else None
         enhanced_image_data = None
-        
+
         if 'enhanced_image' in st.session_state and st.session_state.enhanced_image:
             buffer = BytesIO()
             st.session_state.enhanced_image.save(buffer, format="PNG")
             enhanced_image_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        
+
         # Save to database
         DB.save_image_analysis(
             st.session_state.image_id,
@@ -396,7 +397,7 @@ def save_analysis_to_db():
             enhanced_image_data
         )
         return True
-    
+
     return False
 
 
@@ -410,31 +411,31 @@ if 'model' not in st.session_state:
         st.warning(f"Não foi possível carregar o modelo LLM: {str(e)}")
         # Create a simple mock model
         from langchain.llms.fake import FakeListLLM
-        
+
         responses = [
             """
             Rating: 3/5 stars
-            
+
             Technical Assessment:
             The photograph shows reasonable technical quality with adequate sharpness and a balanced exposure. The composition follows basic principles but could be improved for greater visual impact.
-            
+
             Strengths:
             - Appropriate exposure for the main subject
             - Decent color balance
             - Clear subject identification
-            
+
             Areas for Improvement:
             - Consider applying the rule of thirds more deliberately
             - Increase the contrast slightly to add visual impact
             - Pay attention to the background elements that may distract from the subject
-            
+
             Post-processing Tips:
             - Try enhancing contrast by about 10-15%
             - Slightly increase saturation for more vibrant colors
             - Consider a subtle vignette to direct attention to the subject
             """
         ]
-        
+
         st.session_state.model = FakeListLLM(responses=responses)
         st.session_state.model_status = "fallback"
 
@@ -473,7 +474,7 @@ if 'username' not in st.session_state:
 
 if 'auth_type' not in st.session_state:
     st.session_state.auth_type = None
-    
+
 if 'google_auth_state' not in st.session_state:
     st.session_state.google_auth_state = None
 
@@ -482,7 +483,7 @@ if 'image_id' not in st.session_state:
 
 if 'user_gallery' not in st.session_state:
     st.session_state.user_gallery = []
-    
+
 if 'photo_tip' not in st.session_state:
     st.session_state.photo_tip = None
 
@@ -504,46 +505,46 @@ with st.sidebar:
     # Application info section
     st.subheader("Avaliação Fotográfica com IA")
     st.write("Versão 1.0")
-    
+
     # Tab selection for sidebar
     sidebar_tab1, sidebar_tab2 = st.tabs(["Materiais", "Histórico"])
-    
+
     with sidebar_tab1:
         st.header("Materiais de Referência")
         st.markdown("Faça upload dos materiais de referência para análise fotográfica (PDF, EPUB, MOBI, AZW)")
-        
+
         uploaded_docs = st.file_uploader(
             "Fazer upload de documentos", 
             type=["pdf", "epub", "mobi", "azw"], 
             accept_multiple_files=True
         )
-    
+
     with sidebar_tab2:
         st.header("Histórico de Análises")
-        
+
         # Load user's image history
         try:
             user_images = DB.get_user_images(st.session_state.username)
             st.session_state.user_gallery = user_images
-            
+
             if user_images:
                 st.write(f"Você tem {len(user_images)} imagens analisadas")
-                
+
                 for i, img_data in enumerate(user_images):
                     st.markdown(f"**{i+1}. Imagem analisada em {img_data['upload_date'][:10]}**")
-                    
+
                     if img_data['thumbnail']:
                         # Display a smaller thumbnail
                         st.image(f"data:image/png;base64,{img_data['thumbnail']}", width=100)
-                    
+
                     if img_data['latest_analysis'] and 'rating' in img_data['latest_analysis']:
                         st.write(f"Classificação: {img_data['latest_analysis']['rating']}/5")
-                    
+
                     # Button to load this image and its analysis
                     if st.button(f"Carregar análise #{i+1}", key=f"load_img_{img_data['id']}"):
                         # Get full image details
                         image_details = DB.get_image_details(img_data['id'])
-                        
+
                         if image_details and image_details['analysis_history']:
                             # Get the first entry with image data
                             first_entry = image_details['analysis_history'][0]
@@ -553,54 +554,54 @@ with st.sidebar:
                                 from io import BytesIO
                                 img_bytes = base64.b64decode(first_entry['image_data'])
                                 img = Image.open(BytesIO(img_bytes))
-                                
+
                                 # Update session state
                                 st.session_state.processed_image = img
                                 st.session_state.image_id = img_data['id']
-                                
+
                                 # Get the most recent analysis
                                 latest_analysis = image_details['analysis_history'][-1]
                                 if 'analysis_results' in latest_analysis:
                                     results = latest_analysis['analysis_results']
-                                    
+
                                     if 'rating' in results:
                                         st.session_state.rating = results['rating']
-                                    
+
                                     if 'analysis' in results:
                                         st.session_state.rag_response = results['analysis']
-                                    
+
                                     if 'technical_data' in results:
                                         st.session_state.image_analysis = results['technical_data']
-                                
+
                                 # Check if there's an enhancement
                                 if 'enhancement' in latest_analysis:
                                     enhancement = latest_analysis['enhancement']
                                     st.session_state.enhancement_type = enhancement['type']
-                                    
+
                                     # Load enhanced image if available
                                     if 'image_data' in enhancement:
                                         enhanced_img_bytes = base64.b64decode(enhancement['image_data'])
                                         enhanced_img = Image.open(BytesIO(enhanced_img_bytes))
                                         st.session_state.enhanced_image = enhanced_img
-                                
+
                                 st.success("Análise carregada com sucesso!")
                                 st.rerun()
             else:
                 st.info("Você ainda não tem análises salvas.")
         except Exception as e:
             st.error(f"Erro ao carregar histórico: {str(e)}")
-    
+
     if uploaded_docs:
         for doc in uploaded_docs:
             # Check if document is already processed
             doc_already_processed = any(processed_doc['name'] == doc.name for processed_doc in st.session_state.documents)
-            
+
             if not doc_already_processed:
                 with st.spinner(f"Processando {doc.name}..."):
                     with tempfile.NamedTemporaryFile(delete=False, suffix=f".{get_file_extension(doc.name)}") as tmp:
                         tmp.write(doc.getvalue())
                         tmp_path = tmp.name
-                    
+
                     # Process document and get text content
                     try:
                         doc_content = process_document(tmp_path)
@@ -616,13 +617,13 @@ with st.sidebar:
                         # Clean up the temporary file
                         if os.path.exists(tmp_path):
                             os.unlink(tmp_path)
-    
+
     # Display uploaded documents
     if st.session_state.documents:
         st.subheader("Documentos Processados:")
         for i, doc in enumerate(st.session_state.documents):
             st.write(f"{i+1}. {doc['name']} ({doc['type'].upper()})")
-        
+
         if st.button("Limpar Todos os Documentos"):
             st.session_state.documents = []
             st.session_state.document_embeddings = None
@@ -636,37 +637,37 @@ tab1, tab2, tab3 = st.tabs(["Análise de Fotografia", "Melhorias Sugeridas", "Di
 
 with tab1:
     st.header("Upload e Análise de Fotografia")
-    
+
     # Image upload section
     uploaded_file = st.file_uploader("Faça upload da sua fotografia", type=["jpg", "jpeg", "png"])
-    
+
     if uploaded_file is not None:
         # Display the uploaded image
         image = Image.open(uploaded_file)
         st.session_state.processed_image = image
         st.image(image, caption="Fotografia enviada", use_container_width=True)
-        
+
         # Option to analyze the image
         if st.button("Analisar Fotografia"):
             if not st.session_state.documents:
                 st.warning("Por favor, faça upload de pelo menos um documento de referência para uma análise completa.")
-            
+
             with st.spinner("Analisando a imagem..."):
                 # Get image analysis
                 image_analysis = analyze_image(image)
                 st.session_state.image_analysis = image_analysis
-                
+
                 # Generate RAG response based on image analysis and documents
                 rag_response = generate_rag_response(
                     image_analysis,
                     st.session_state.documents,
                     st.session_state.model
                 )
-                
+
                 # Translate response to Portuguese
                 portuguese_response = translate_to_portuguese(rag_response)
                 st.session_state.rag_response = portuguese_response
-                
+
                 # Extract rating from the response (assuming the model includes a rating)
                 # In a real implementation, you might want a more robust way to extract this
                 try:
@@ -683,88 +684,88 @@ with tab1:
                         st.session_state.rating = 1
                 except:
                     st.session_state.rating = 3  # Default rating if extraction fails
-                
+
                 # Save analysis to database
                 try:
                     if save_analysis_to_db():
                         st.success("Análise salva no banco de dados!")
                 except Exception as e:
                     st.warning(f"Não foi possível salvar a análise no banco de dados: {str(e)}")
-            
+
             # Display the results
             st.subheader("Resultados da Análise")
             st.markdown("### Avaliação")
             display_rating_stars(st.session_state.rating)
-            
+
             st.markdown("### Feedback Detalhado")
             st.write(st.session_state.rag_response)
 
 with tab2:
     st.header("Melhorias Sugeridas")
-    
+
     if st.session_state.processed_image is not None and st.session_state.rag_response is not None:
         st.subheader("Sugestões para Melhoria da Fotografia")
         st.write(st.session_state.rag_response)
-        
+
         st.subheader("Aplicar Melhorias Básicas")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             enhancement_type = st.selectbox(
                 "Selecione o tipo de melhoria:",
                 ["Brilho", "Contraste", "Nitidez", "Cor"]
             )
-            
+
             if enhancement_type == "Brilho":
                 brightness_factor = st.slider("Ajuste de Brilho", 0.5, 2.0, 1.0, 0.1)
                 if st.button("Aplicar Ajuste de Brilho"):
                     with st.spinner("Aplicando ajuste de brilho..."):
                         st.session_state.enhanced_image = enhance_image_brightness(st.session_state.processed_image, brightness_factor)
                         st.session_state.enhancement_type = "Brilho"
-            
+
             elif enhancement_type == "Contraste":
                 contrast_factor = st.slider("Ajuste de Contraste", 0.5, 2.0, 1.0, 0.1)
                 if st.button("Aplicar Ajuste de Contraste"):
                     with st.spinner("Aplicando ajuste de contraste..."):
                         st.session_state.enhanced_image = enhance_image_contrast(st.session_state.processed_image, contrast_factor)
                         st.session_state.enhancement_type = "Contraste"
-            
+
             elif enhancement_type == "Nitidez":
                 sharpness_factor = st.slider("Ajuste de Nitidez", 0.0, 3.0, 1.0, 0.1)
                 if st.button("Aplicar Ajuste de Nitidez"):
                     with st.spinner("Aplicando ajuste de nitidez..."):
                         st.session_state.enhanced_image = enhance_image_sharpness(st.session_state.processed_image, sharpness_factor)
                         st.session_state.enhancement_type = "Nitidez"
-            
+
             elif enhancement_type == "Cor":
                 color_factor = st.slider("Ajuste de Saturação de Cor", 0.0, 2.0, 1.0, 0.1)
                 if st.button("Aplicar Ajuste de Cor"):
                     with st.spinner("Aplicando ajuste de cor..."):
                         st.session_state.enhanced_image = enhance_image_color(st.session_state.processed_image, color_factor)
                         st.session_state.enhancement_type = "Cor"
-        
+
         with col2:
             if st.session_state.enhanced_image is not None:
                 st.image(st.session_state.enhanced_image, caption=f"Imagem com ajuste de {st.session_state.enhancement_type} aplicado", use_container_width=True)
-                
+
                 # Save enhanced image button
                 buf = io.BytesIO()
                 st.session_state.enhanced_image.save(buf, format="PNG")
                 byte_im = buf.getvalue()
-                
+
                 # Save to database button
                 if st.button("Salvar no Sistema", key="save_enhanced"):
                     try:
                         # Update enhancement in session state
                         st.session_state.enhancement_type = enhancement_type
-                        
+
                         # Save to database
                         if save_analysis_to_db():
                             st.success("Imagem melhorada salva no banco de dados!")
                     except Exception as e:
                         st.warning(f"Não foi possível salvar a imagem melhorada: {str(e)}")
-                
+
                 # Download button
                 st.download_button(
                     label="Baixar Imagem Melhorada",
@@ -780,31 +781,31 @@ with tab2:
 # Tip of the Day tab
 with tab3:
     st.header("Dica de Fotografia do Dia")
-    
+
     # Initialize tip in session state if not already there
     if 'photo_tip' not in st.session_state:
         with st.spinner('Gerando dica de fotografia...'):
             st.session_state.photo_tip = get_tip_of_the_day(st.session_state.model)
-    
+
     # Display the tip
     if st.session_state.photo_tip:
         st.subheader(st.session_state.photo_tip["title"])
         st.write(st.session_state.photo_tip["content"])
         st.caption(f"Tópico: {st.session_state.photo_tip['topic']}")
         st.caption(f"Data: {st.session_state.photo_tip['date']}")
-    
+
     # Get a different tip
     if st.button("Nova Dica"):
         with st.spinner('Gerando nova dica de fotografia...'):
             st.session_state.photo_tip = get_tip_of_the_day(st.session_state.model, force_refresh=True)
             st.rerun()
-    
+
     # Get a tip on a specific topic
     st.subheader("Buscar Dica por Tópico")
     from photography_tips import PHOTOGRAPHY_TIP_TOPICS
-    
+
     topic = st.selectbox("Selecione um tópico de fotografia:", PHOTOGRAPHY_TIP_TOPICS)
-    
+
     if st.button("Buscar Dica por Tópico"):
         with st.spinner(f'Gerando dica sobre {topic}...'):
             topic_tip = get_tip_by_topic(st.session_state.model, topic)
