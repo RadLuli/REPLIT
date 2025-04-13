@@ -479,26 +479,21 @@ with st.sidebar:
     st.header("Materiais de Referência")
     st.markdown("Faça upload dos materiais de referência para análise fotográfica (PDF, EPUB, MOBI, AZW)")
 
-    uploaded_docs = st.file_uploader(
-        "Fazer upload de documentos", 
-        type=["pdf", "epub", "mobi", "azw"], 
-        accept_multiple_files=True
-    )
-
-    # Placeholder for additional sidebar content
-    st.header("Histórico de Análises")
-
-        # Load user's image history
-        try:
-            user_images = DB.get_user_images(st.session_state.username)
-            st.session_state.user_gallery = user_images
-    
-            if user_images:
-                st.write(f"Você tem {len(user_images)} imagens analisadas")
-    
-                for i, img_data in enumerate(user_images):
-                    st.markdown(f"**{i+1}. Imagem analisada em {img_data['upload_date'][:10]}**")
-    
+uploaded_docs = st.file_uploader(
+"Fazer upload de documentos", 
+type=["pdf", "epub", "mobi", "azw"], 
+accept_multiple_files=True
+)
+# Placeholder for additional sidebar content
+st.header("Histórico de Análises")
+# Load user's image history
+try:
+user_images = DB.get_user_images(st.session_state.username)
+st.session_state.user_gallery = user_images
+if user_images:
+st.write(f"Você tem {len(user_images)} imagens analisadas")
+for i, img_data in enumerate(user_images):
+st.markdown(f"**{i+1}. Imagem analisada em {img_data['upload_date'][:10]}**")
                     if img_data['thumbnail']:
                         # Display a smaller thumbnail
                         st.image(f"data:image/png;base64,{img_data['thumbnail']}", width=100)
