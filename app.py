@@ -1,6 +1,13 @@
 
 import streamlit as st
 
+# Set page configuration first
+st.set_page_config(
+    page_title="Avaliação Fotográfica com IA",
+    page_icon="📸",
+    layout="wide"
+)
+
 # Custom CSS for dark minimal UI
 st.markdown("""
 <style>
@@ -350,12 +357,7 @@ def save_analysis_to_db():
     
     return False
 
-# Set page configuration
-st.set_page_config(
-    page_title="Avaliação Fotográfica com IA",
-    page_icon="📸",
-    layout="wide"
-)
+
 
 # Initialize session state variables if they don't exist
 if 'model' not in st.session_state:
